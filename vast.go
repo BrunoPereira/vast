@@ -6,16 +6,16 @@ import "encoding/xml"
 // VAST is the root <VAST> tag
 type VAST struct {
 	// The version of the VAST spec (should be either "2.0" or "3.0")
-	Version string `xml:"version,attr"`
+	Version string `xml:"version,attr" json:"version"`
 	// One or more Ad elements. Advertisers and video content publishers may
 	// associate an <Ad> element with a line item video ad defined in contract
 	// documentation, usually an insertion order. These line item ads typically
 	// specify the creative to display, price, delivery schedule, targeting,
 	// and so on.
-	Ads []Ad `xml:"Ad"`
+	Ads []Ad `xml:"Ad" json:"ad"`
 	// Contains a URI to a tracking resource that the video player should request
 	// upon receiving a “no ad” response
-	Errors []CDATAString `xml:"Error,omitempty"`
+	Errors []CDATAString `xml:"Error,omitempty" json:"Error,omitempty"`
 }
 
 // Ad represent an <Ad> child tag in a VAST document
@@ -23,18 +23,24 @@ type VAST struct {
 // Each <Ad> contains a single <InLine> element or <Wrapper> element (but never both).
 type Ad struct {
 	// An ad server-defined identifier string for the ad
-	ID string `xml:"id,attr,omitempty"`
+	ID string `xml:"id,attr,omitempty" json:"id,omitempty"`
 	// A number greater than zero (0) that identifies the sequence in which
 	// an ad should play; all <Ad> elements with sequence values are part of
 	// a pod and are intended to be played in sequence
-	Sequence int      `xml:"sequence,attr,omitempty"`
-	InLine   *InLine  `xml:",omitempty"`
-	Wrapper  *Wrapper `xml:",omitempty"`
+	Sequence int      `xml:"sequence,attr,omitempty" json:"sequence,omitempty"`
+	InLine   *InLine  `xml:",omitempty" json:"inLine,omitempty"`
+	Wrapper  *Wrapper `xml:",omitempty" json:"wrapper,omitempty"`
 }
 
 // CDATAString ...
 type CDATAString struct {
 	CDATA string `xml:",cdata"`
+}
+
+// CreativesJSON ...
+// Json annotation doesn't have nested fields, unlike xml
+type CreativesJSON struct {
+	Creative []Creative `json:"creative"`
 }
 
 // InLine is a vast <InLine> ad element containing actual ad definition
@@ -46,12 +52,14 @@ type InLine struct {
 	// The name of the ad server that returned the ad
 	AdSystem *AdSystem
 	// The common name of the ad
-	AdTitle CDATAString
+	AdTitle CDATAString `json:"-"`
 	// One or more URIs that directs the video player to a tracking resource file that the
 	// video player should request when the first frame of the ad is displayed
-	Impressions []Impression `xml:"Impression"`
+	Impressions []Impression `xml:"Impression" json:"impression"`
 	// The container for one or more <Creative> elements
 	Creatives []Creative `xml:"Creatives>Creative"`
+	// The container for one or more <Creative> elements
+	CreativesJSON *CreativesJSON `json:"creatives"`
 	// A string value that provides a longer description of the ad.
 	Description CDATAString `xml:",omitempty"`
 	// The name of the advertiser as defined by the ad serving party.
@@ -70,6 +78,7 @@ type InLine struct {
 	// A URI representing an error-tracking pixel; this element can occur multiple
 	// times.
 	Errors []CDATAString `xml:"Error,omitempty"`
+	Error  string        `json:"error,omitempty"`
 	// Provides a value that represents a price that can be used by real-time bidding
 	// (RTB) systems. VAST is not designed to handle RTB since other methods exist,
 	// but this element is offered for custom solutions if needed.
@@ -78,14 +87,14 @@ type InLine struct {
 	// custom element should be nested under <Extensions> to help separate custom
 	// XML elements from VAST elements. The following example includes a custom
 	// xml element within the Extensions element.
-	Extensions *[]Extension `xml:"Extensions>Extension,omitempty"`
+	Extensions *[]Extension `xml:"Extensions>Extension,omitempty" json:"-"`
 }
 
 // Impression is a URI that directs the video player to a tracking resource file that
 // the video player should request when the first frame of the ad is displayed
 type Impression struct {
 	ID  string `xml:"id,attr,omitempty"`
-	URI string `xml:",cdata"`
+	URI string `xml:",cdata" json:"value"`
 }
 
 // Pricing provides a value that represents a price that can be used by real-time
@@ -136,22 +145,22 @@ type Wrapper struct {
 
 // AdSystem contains information about the system that returned the ad
 type AdSystem struct {
-	Version string `xml:"version,attr,omitempty"`
-	Name    string `xml:",cdata"`
+	Version string `xml:"version,attr,omitempty" json:"version,omitempty"`
+	Name    string `xml:",cdata" json:"value,omitempty"`
 }
 
 // Creative is a file that is part of a VAST ad.
 type Creative struct {
 	// An ad server-defined identifier for the creative
-	ID string `xml:"id,attr,omitempty"`
+	ID string `xml:"id,attr,omitempty" json:"id,omitempty"`
 	// The preferred order in which multiple Creatives should be displayed
-	Sequence int `xml:"sequence,attr,omitempty"`
+	Sequence int `xml:"sequence,attr,omitempty" json:"sequence,omitempty"`
 	// Identifies the ad with which the creative is served
 	AdID string `xml:"AdID,attr,omitempty"`
 	// The technology used for any included API
 	APIFramework string `xml:"apiFramework,attr,omitempty"`
 	// If present, defines a linear creative
-	Linear *Linear `xml:",omitempty"`
+	Linear *Linear `xml:",omitempty" json:"linear,omitempty"`
 	// If defined, defins companions creatives
 	CompanionAds *CompanionAds `xml:",omitempty"`
 	// If defined, defines non linear creatives
@@ -220,6 +229,18 @@ type NonLinearAdsWrapper struct {
 	NonLinears []NonLinearWrapper `xml:"NonLinear,omitempty"`
 }
 
+// TrackingEventsJSON ...
+// Json annotation doesn't have nested fields, unlike xml
+type TrackingEventsJSON struct {
+	Tracking []Tracking `json:"tracking"`
+}
+
+// MediaFilesJSON ...
+// Json annotation doesn't have nested fields, unlike xml
+type MediaFilesJSON struct {
+	MediaFile []MediaFile `json:"mediaFile"`
+}
+
 // Linear is the most common type of video advertisement trafficked in the
 // industry is a “linear ad”, which is an ad that displays in the same area
 // as the content but not at the same time as the content. In fact, the video
@@ -235,14 +256,16 @@ type Linear struct {
 	// represents milliseconds and is optional. This skipoffset value
 	// indicates when the skip control should be provided after the creative
 	// begins playing.
-	SkipOffset *Offset `xml:"skipoffset,attr,omitempty"`
+	SkipOffset *Offset `xml:"skipoffset,attr,omitempty" json:"skipoffset,omitempty"`
 	// Duration in standard time format, hh:mm:ss
-	Duration       Duration
-	AdParameters   *AdParameters `xml:",omitempty"`
-	Icons          *Icons
-	TrackingEvents []Tracking   `xml:"TrackingEvents>Tracking,omitempty"`
-	VideoClicks    *VideoClicks `xml:",omitempty"`
-	MediaFiles     []MediaFile  `xml:"MediaFiles>MediaFile,omitempty"`
+	Duration           Duration
+	AdParameters       *AdParameters `xml:",omitempty"`
+	Icons              *Icons
+	TrackingEvents     []Tracking          `xml:"TrackingEvents>Tracking,omitempty"`
+	TrackingEventsJSON *TrackingEventsJSON `json:"trackingevents"`
+	VideoClicks        *VideoClicks        `xml:",omitempty"`
+	MediaFiles         []MediaFile         `xml:"MediaFiles>MediaFile,omitempty"`
+	MediaFilesJSON     *MediaFilesJSON     `json:"mediaFiles"`
 }
 
 // LinearWrapper defines a wrapped linear creative
@@ -394,6 +417,7 @@ type NonLinearWrapper struct {
 	NonLinearClickTracking []CDATAString `xml:",omitempty"`
 }
 
+// Icons ...
 type Icons struct {
 	XMLName xml.Name `xml:"Icons,omitempty"`
 	Icon    []Icon   `xml:"Icon,omitempty"`
@@ -439,11 +463,11 @@ type Tracking struct {
 	// Possible values are creativeView, start, firstQuartile, midpoint, thirdQuartile,
 	// complete, mute, unmute, pause, rewind, resume, fullscreen, exitFullscreen, expand,
 	// collapse, acceptInvitation, close, skip, progress.
-	Event string `xml:"event,attr"`
+	Event string `xml:"event,attr" json:"event"`
 	// The time during the video at which this url should be pinged. Must be present for
 	// progress event. Must match (\d{2}:[0-5]\d:[0-5]\d(\.\d\d\d)?|1?\d?\d(\.?\d)*%)
-	Offset *Offset `xml:"offset,attr,omitempty"`
-	URI    string  `xml:",cdata"`
+	Offset *Offset `xml:"offset,attr,omitempty" json:"offset,omitempty"`
+	URI    string  `xml:",cdata" json:"value"`
 }
 
 // StaticResource is the URL to a static file, such as an image or SWF file
@@ -484,31 +508,31 @@ type VideoClick struct {
 // MediaFile defines a reference to a linear creative asset
 type MediaFile struct {
 	// Optional identifier
-	ID string `xml:"id,attr,omitempty"`
+	ID string `xml:"id,attr,omitempty" json:"id,omitempty"`
 	// Method of delivery of ad (either "streaming" or "progressive")
-	Delivery string `xml:"delivery,attr"`
+	Delivery string `xml:"delivery,attr" json:"delivery"`
 	// MIME type. Popular MIME types include, but are not limited to
 	// “video/x-ms-wmv” for Windows Media, and “video/x-flv” for Flash
 	// Video. Image ads or interactive ads can be included in the
 	// MediaFiles section with appropriate Mime types
-	Type string `xml:"type,attr"`
+	Type string `xml:"type,attr" json:"type"`
 	// The codec used to produce the media file.
-	Codec string `xml:"codec,attr,omitempty"`
+	Codec string `xml:"codec,attr,omitempty" json:"codec,omitempty"`
 	// Bitrate of encoded video in Kbps. If bitrate is supplied, MinBitrate
 	// and MaxBitrate should not be supplied.
-	Bitrate int `xml:"bitrate,attr,omitempty"`
+	Bitrate int `xml:"bitrate,attr,omitempty" json:"bitrate,omitempty"`
 	// Minimum bitrate of an adaptive stream in Kbps. If MinBitrate is supplied,
 	// MaxBitrate must be supplied and Bitrate should not be supplied.
-	MinBitrate int `xml:"minBitrate,attr,omitempty"`
+	MinBitrate int `xml:"minBitrate,attr,omitempty" json:"minBitrate,omitempty"`
 	// Maximum bitrate of an adaptive stream in Kbps. If MaxBitrate is supplied,
 	// MinBitrate must be supplied and Bitrate should not be supplied.
-	MaxBitrate int `xml:"maxBitrate,attr,omitempty"`
+	MaxBitrate int `xml:"maxBitrate,attr,omitempty" json:"maxBitrate,omitempty"`
 	// Pixel dimensions of video.
-	Width int `xml:"width,attr"`
+	Width int `xml:"width,attr" json:"width"`
 	// Pixel dimensions of video.
-	Height int `xml:"height,attr"`
+	Height int `xml:"height,attr" json:"height"`
 	// Whether it is acceptable to scale the image.
-	Scalable bool `xml:"scalable,attr,omitempty"`
+	Scalable bool `xml:"scalable,attr,omitempty" json:"scalable"`
 	// Whether the ad must have its aspect ratio maintained when scales.
 	MaintainAspectRatio bool `xml:"maintainAspectRatio,attr,omitempty"`
 	// The APIFramework defines the method to use for communication if the MediaFile
@@ -516,7 +540,7 @@ type MediaFile struct {
 	// (for Flash/Flex), “initParams” (for Silverlight) and “GetVariables” (variables
 	// placed in key/value pairs on the asset request).
 	APIFramework string `xml:"apiFramework,attr,omitempty"`
-	URI          string `xml:",cdata"`
+	URI          string `xml:",cdata" json:"value"`
 }
 
 // UniversalAdID describes a VAST 4.x universal ad id.
